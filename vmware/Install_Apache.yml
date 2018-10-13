@@ -1,0 +1,9 @@
+---
+- hosts: webservers
+
+  tasks:
+    - name: Install Package
+      yum:
+        name: httpd
+        state: latest
+        

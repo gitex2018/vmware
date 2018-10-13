@@ -1,0 +1,24 @@
+---
+- hosts: all
+  gather_facts: false
+  connection: local
+  user: remote
+  sudo: false
+
+  vars:
+    vcenter_hostname: '192.168.1.26'
+    vcenter_user: 'administrator@home.net'
+    vcenter_pass: 'Smartvm!23'
+    datacenter: 'Coulsdon'
+    esxi_host: '192.168.1.21'
+
+
+  tasks:
+    - name: RenameVM
+      vmware_guest:
+        vcenter_hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_pass }}"
+        uuid: 775e62e0-242a-11e7-86b0-000c29894fab 
+        name: new_name
+        state: present

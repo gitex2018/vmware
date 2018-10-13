@@ -1,0 +1,6 @@
+---
+- name: Tweet Response to User
+  hosts: localhost
+  connection: local
+  vars:
+  - object: root

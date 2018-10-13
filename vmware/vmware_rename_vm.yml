@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+
+  tasks:
+    - name: RenameVM
+      vsphere_guest:
+        validate_certs: False      
+        vcenter_hostname: 192.168.1.26
+        username: administrator@home.net
+        password: Smartvm!23
+        guest: CENTOS_T1
+        state: reconfigured
+        vm_hardware:
+            num_cpus: 1
+            memory_mb: 1024
+      delegate_to: localhost

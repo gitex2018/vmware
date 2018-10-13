@@ -1,0 +1,105 @@
+# John Hardy
+# Get IP from PHPIPAM
+---
+- hosts: localhost
+
+  vars:
+    cidr: "10.9.61.64/26"
+    token: ""
+    username: "admin"
+    password: "password"
+    ipam_server: "10.9.61.97"
+    token_url: "http://{{ ipam_server }}/api/cfme/user/"
+    manageiq_validate_certs: False
+    object: root
+    
+  roles:
+  - syncrou.manageiq-automate
+  - syncrou.manageiq-vmdb
+  
+  tasks:
+    - debug:
+        msg: "VM NAME {{ vm_name }}"
+        
+#    - name: "Get miq_request object reference"
+#      manageiq_automate:
+#        workspace: "{{ workspace }}"
+#        get_attribute:
+#          object: "root"
+#          attribute: "miq_request"
+#      register: miq_request
+
+#    - debug: msg="miq_request is {{ miq_request.value }}"
+        
+    - name: Call to get token
+      uri:
+        url: "{{ token_url }}"
+        method: POST
+        user: "{{ username }}"
+        password: "{{ password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        headers:
+           Content-Type: "application/json"
+        body_format: json
+        return_content: yes
+      register: token_output
+
+    - set_fact: token="{{ token_output.json.data.token }}"
+
+    - debug:
+        msg: "IPAM Token is {{ token }}"
+
+    - name: Call to find subnet id
+      uri:
+        url: "http://{{ ipam_server }}/api/cfme/subnets/cidr/{{ cidr }}/"
+        method: GET
+        validate_certs: no
+        headers:
+           Content-Type: "application/json"
+           token: "{{ token }}"
+        body_format: json
+        return_content: yes
+      register: token_output
+
+    - set_fact: subnet_href="{{ token_output.json.data[0].links[0].href }}"
+
+    - debug:
+        msg: "IPAM {{ cidr }} returned ID {{ subnet_href }}"
+
+    - name: Call to first IP address
+      uri:
+        url: "http://{{ ipam_server }}{{ subnet_href }}first_free/"
+        method: GET
+        validate_certs: no
+        headers:
+           Content-Type: "application/json"
+           token: "{{ token }}"
+        body_format: json
+        return_content: yes
+      register: free_ip
+
+    - set_fact: ipaddress="{{ free_ip.json.data }}"
+
+    - debug:
+        msg: "IPAM first free address is {{ ipaddress }}"
+
+    - name: Update vmname in Task options
+      manageiq_vmdb:
+        href: "{{ manageiq.request_task }}"
+        action: edit
+        data: 
+          options:
+            hostname: "{{ vm_name }}"
+            vm_target_hostname: "{{ vm_name }}"
+            vm_target_name: "{{ vm_name }}"
+            vm_name: "{{ vm_name }}"
+            #addr_mode: "static"
+            subnet_mask: "255.255.255.192"
+            gateway: "10.9.61.65"
+            dns_servers: "10.9.62.86"
+            dns_suffixes: ""
+            ip_addr: "{{ ipaddress }}"
+      register:    result
+
+    - debug: msg="attribute result dictionary {{ result }}"

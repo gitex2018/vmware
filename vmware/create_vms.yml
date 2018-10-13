@@ -1,0 +1,46 @@
+---
+- hosts: all
+  gather_facts: false
+  connection: local
+  user: remote
+  sudo: false
+
+  vars:
+    vcenter_hostname: '10.9.62.70'
+    datacenter: 'Datacenter'
+    esxi_host: '10.9.62.5'
+    notes: 'Created by Ansible and CloudForms'
+    disk: '10' 
+    datastore: 'Shared-NFS' 
+    network: 'VM Network' 
+    memory: '256' 
+    cpucount: '1' 
+    osid: 'rhel7_64Guest'
+
+  tasks:
+    - name: Create Virtual Machines
+      vsphere_guest:
+        validate_certs: no
+        vcenter_hostname: "{{ vcenter_hostname }}"
+        guest: "{{ inventory_hostname }}"
+        state: present
+        vm_extra_config:
+          notes: "{{ notes }}"
+        vm_disk:
+          disk1:
+            size_gb: "{{ disk }}"
+            type: thin
+            datastore: "{{ datastore }}"
+        vm_nic:
+          nic1:
+            type: vmxnet3
+            network: "{{ network }}"
+            network_type: standard
+        vm_hardware:
+          memory_mb: "{{ memory }}"
+          num_cpus: "{{ cpucount }}"
+          osid: "{{ osid }}"
+          scsi: paravirtual
+        esxi:
+          datacenter: "{{ datacenter }}"
+          hostname: "{{ esxi_host }}"

@@ -1,0 +1,50 @@
+---
+- hosts: all
+  gather_facts: false
+  connection: local
+
+  vars:
+    vcenter_hostname: '10.9.62.70'
+    datacenter: 'Datacenter'
+    esxi_host: '10.9.62.5'
+    notes: 'Created by Ansible and CloudForms'
+    disk: '80' 
+    datastore: 'Shared-NFS' 
+    network: 'VM Network' 
+    memory: '2048' 
+    cpucount: '1' 
+    osid: 'rhel7_64Guest'
+
+
+  tasks:
+    - name: Create Virtual Machines
+      vsphere_guest:
+        validate_certs: no
+        vcenter_hostname: "{{ vcenter_hostname }}"
+        username: administrator@vsphere.local
+        password: Redhat1!
+        guest: "{{ inventory_hostname }}"
+        state: powered_on
+        vm_extra_config:
+          notes: "{{ notes }}"
+        vm_disk:
+          disk1:
+            size_gb: "{{ disk }}"
+            type: thin
+            datastore: "{{ datastore }}"
+        vm_nic:
+          nic1:
+            type: vmxnet3
+            network: "{{ network }}"
+            network_type: standard
+        vm_hardware:
+          memory_mb: "{{ memory }}"
+          num_cpus: "{{ cpucount }}"
+          osid: "{{ osid }}"
+          scsi: paravirtual
+          vm_cdrom:
+            type: "iso"
+            iso_path: "Shared-NFS/rhel-server-7.3-x86_64-dvd.iso"
+        esxi:
+          datacenter: "{{ datacenter }}"
+          hostname: "{{ esxi_host }}"

@@ -1,0 +1,16 @@
+---
+- hosts: all
+
+  vars:
+    
+  tasks:
+    - debug:
+        msg: "Running PLAYBOOK SSH Configure"
+
+    - name: Subscribe to RHN
+      redhat_subscription:
+        state: present
+        username: "{{ rhn_user }}"
+        password: "{{ rhn_password }}"
+        pool_ids: "{{ rhn_pool }}"
+

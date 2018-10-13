@@ -1,0 +1,6 @@
+---
+- name: Install FTP on Guest
+  hosts: localhost
+  connection: local
+  vars:
+  - object: root

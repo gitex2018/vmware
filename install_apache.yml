@@ -1,0 +1,6 @@
+---
+- name: Install Apache on Guest
+  hosts: localhost
+  connection: local
+  vars:
+  - object: root

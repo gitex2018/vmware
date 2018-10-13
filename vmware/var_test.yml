@@ -1,0 +1,10 @@
+---
+- hosts: all
+  gather_facts: false
+  connection: local
+
+  vars:
+    vcenter_hostname: '{{ vcenter_hostname }}' 
+
+  tasks:
+    - debug: var=vcenter_hostname
