@@ -13,7 +13,6 @@
     - debug: var=esxi_host
     - debug: var=datacenter
     - debug: var=template
-    - debug: var=power_on_after_clone
     - debug: var=manageiq.api_url
     - debug: var=manageiq.api_token
     - debug: var=manageiq.service
@@ -33,7 +32,7 @@
         validate_certs: no
         vcenter_hostname: "{{ vcenter_hostname }}"
         guest: "{{ inventory_hostname }}"
-        power_on_after_clone: "{{ power_on_after_clone }}"
+        power_on_after_clone: yes
         from_template: yes
         template_src: "{{ template }}"
         esxi:
