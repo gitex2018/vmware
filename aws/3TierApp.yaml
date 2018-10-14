@@ -186,7 +186,7 @@
       - name: ticketmonster
     postgresql_users:
       - name: test
-      - password: test
+        password: test
 
   roles:
     - { role: sfromm.postgresql }
