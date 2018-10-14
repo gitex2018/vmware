@@ -1,0 +1,138 @@
+---
+- name: Create new EC2 instances
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars:
+    region:   us-east-1
+    ami:      ami-81cf0c97 
+    keypair:  "{{ ec2_keypair_name | default('you need to define this') }}"
+    set_dns:  False
+    count:    "{% if instance_count is defined -%}{{ instance_count | int }}{% else %}1{%- endif %}"
+    tags:
+      env:  "{{ tags_env  | default('prod') }}"
+      type: "{{ tags_type | default('app') }}"
+    wait_for_ssh: False
+    provider_id: "{{ provider_id }}"
+    max_retries: 9
+    retry_interval: 20
+
+  tasks:
+    - name: Launch instance
+      local_action:
+        module: ec2
+        keypair: "{{ keypair }}"
+        instance_type: "{{ type | default('t2.micro') }}"
+        vpc_subnet_id: "subnet-{{ vpc_subnet | default('d931e1e5') }}"
+        image: "{{ ami }}"
+        region: "{{ region }}"
+        count: "{{ count }}"
+        wait: yes
+        instance_tags: "{{ tags }}"
+#        user_data: "{{ lookup('file', '../scripts/ec2_bootstrap.sh') }}"
+        assign_public_ip: "{{ assign_eip | default(true) }}"
+      register: ec2
+
+    - name: Wait for SSH to come up
+      wait_for:
+        host: "{{ item.public_dns_name }}"
+        port: 22
+        delay: 60
+        timeout: 320
+        state: started
+      with_items: "{{ ec2.instances }}"
+
+    - name: Instance info
+      debug:
+        msg: "{{ item.id }} {{ item.public_ip }}"
+      with_items: "{{ ec2.instances }}"
+
+    - name: Set the Provider URL
+      set_fact:
+        provider_url: "{{ manageiq.api_url }}/api/providers/{{ provider_id }}"
+
+    - name: Refresh Amazon EC2 provider in CloudForms
+      uri:
+        url: "{{ provider_url }}"
+        method: POST
+        body:
+          action: refresh
+        body_format: json
+        validate_certs: False
+        headers:
+          X-Auth-Token: "{{ manageiq.api_token }}"
+          Content-Type: "application/json"
+        status_code: 200
+      register: output
+
+    - name: Set the task href
+      set_fact:
+        task_url: "{{ output.json.task_href}}"
+
+    - name: Wait for the provider refresh to end
+      uri:
+        url: "{{ task_url }}"
+        method: GET
+        validate_certs: False
+        headers:
+          X-Auth-Token: "{{ manageiq.api_token }}"
+          Content-Type: "application/json"
+        status_code: 200
+      register: task_result
+      until: task_result.json.state == 'Finished' or task_result.json.status == 'Error'
+      failed_when: task_result.json.status == 'Error'
+      retries: "{{max_retries}}"
+      delay: "{{retry_interval}}"
+
+    - name: Lookup instances href
+      uri:
+        url: "{{ manageiq.api_url }}/api/vms?filter[]=uid_ems={{ item.id }}&expand=resources"
+        method: GET
+        body:
+          action: refresh
+        body_format: json
+        validate_certs: False
+        headers:
+          X-Auth-Token: "{{ manageiq.api_token }}"
+          Content-Type: "application/json"
+        status_code: 200
+      register: output
+      with_items: "{{ ec2.instances }}"
+
+    - name: Set the Service URL
+      set_fact:
+        svc_url: "/api/{{ manageiq.service }}"
+
+    - name: Initialize an empty list for vms
+      set_fact:
+        vms: []
+
+    - name: Append resource href to vms list
+      set_fact:
+        vms: "{{ vms }} + [ { 'href': svc_url, 'resource': { 'href': '/api/vms/{{ item.json.resources[0].id }}' } } ]"
+      with_items: "{{ output.results }}"
+
+    - debug: var=vms
+    
+    - name: Register vms with the service
+      uri:
+        url: "{{ manageiq.api_url }}/api/services"
+        method: POST
+        body_format: json
+        body:
+          action: add_resource
+          resources: "{{ vms }}"
+        validate_certs: False
+        headers:
+          X-Auth-Token: "{{ manageiq.api_token }}"
+          Content-Type: "application/json"
+        status_code: 200
+      register: output
+
+    - debug: var=output.json.results[0].success
+
+    - name: Check if the VM was successfully attached to service
+      fail: msg="{{output.json.results[0].message}}"
+      when: output.json.results[0].success == false
+      

@@ -1,0 +1,9 @@
+---
+- name: Ping
+  hosts: "{{ hosts }}"
+  user: "{{ user }}"
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Ping host
+      ping:
