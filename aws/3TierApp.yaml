@@ -7,7 +7,7 @@
   vars:
     region:   ap-south-1
     ami:      ami-0ffe91b779992e6bd
-    keypair:  "{{ ec2_keypair_name | default('aws-jmarc') }}"
+    keypair:  "{{ ec2_keypair_name | default('shen-ni-test') }}"
     set_dns:  False
     count:    2
     tags_db:
